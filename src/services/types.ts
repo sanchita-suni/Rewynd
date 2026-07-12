@@ -88,9 +88,22 @@ export interface CreatedIssue {
   url: string;
 }
 
+/** Options for a memory lookup. */
+export interface MemoryLookupOptions {
+  /**
+   * Slack `action_token` from the triggering event. `assistant.search.context`
+   * requires it to tie the search to a real user action; delivered in the
+   * message event payload for AI apps.
+   */
+  actionToken?: string;
+}
+
 export interface MemoryService {
   /** Find a prior incident matching this error, or null if we've never seen it. */
-  findPriorIncident(errorSignature: ErrorSignature): Promise<PriorIncident | null>;
+  findPriorIncident(
+    errorSignature: ErrorSignature,
+    opts?: MemoryLookupOptions,
+  ): Promise<PriorIncident | null>;
 }
 
 export interface CodeService {

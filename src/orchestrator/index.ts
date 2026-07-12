@@ -20,6 +20,7 @@ import { mergeIncident, recallIncident } from './incidentContext';
  */
 export async function assembleModel(
   errorSignature: ErrorSignature,
+  opts?: { actionToken?: string },
 ): Promise<IncidentCardModel> {
   // Reuse a fully-assembled model from the session cache when present.
   const cached = recallIncident(errorSignature.signature);
@@ -33,7 +34,9 @@ export async function assembleModel(
     };
   }
 
-  const prior = await memoryService.findPriorIncident(errorSignature);   // RTS
+  const prior = await memoryService.findPriorIncident(errorSignature, {
+    actionToken: opts?.actionToken,
+  }); // RTS
   const code = await codeService.groundError(errorSignature);            // GitHub MCP
   const synthesis = await synthesisService.recommend(prior, code);       // LLM
   const voice = await voiceService.renderTriage(synthesis.triageSummary); // Murf
@@ -56,11 +59,13 @@ export interface RunIncidentArgs {
   threadTs: string;
   text: string;
   logger: Logger;
+  /** Slack action_token from the triggering event, for the RTS call. */
+  actionToken?: string;
 }
 
 /** Full path: extract signature, run the chain, post the card + native audio player. */
 export async function runIncident(args: RunIncidentArgs): Promise<void> {
-  const { client, channel, threadTs, text, logger } = args;
+  const { client, channel, threadTs, text, logger, actionToken } = args;
 
   const signature = extractSignature(text);
   logger.info(
@@ -70,7 +75,7 @@ export async function runIncident(args: RunIncidentArgs): Promise<void> {
       }`,
   );
 
-  const model = await assembleModel(signature);
+  const model = await assembleModel(signature, { actionToken });
   const blocks = buildIncidentCard(model, { expanded: false });
 
   await client.chat.postMessage({

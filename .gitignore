@@ -1,9 +1,59 @@
+# ─── Dependencies ───────────────────────────────────────────────────────────
 node_modules/
+.npm/
+.pnp/
+.pnp.*
+
+# ─── Build output ───────────────────────────────────────────────────────────
 dist/
+build/
+*.tsbuildinfo
+
+# ─── Secrets / env (keep .env.example) ──────────────────────────────────────
 .env
-.env.local
+.env.*
+!.env.example
+
+# ─── Logs ───────────────────────────────────────────────────────────────────
 *.log
 npm-debug.log*
-.DS_Store
-.idea/
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.node_repl_history
+
+# ─── Test / coverage ────────────────────────────────────────────────────────
+coverage/
+.nyc_output/
+
+# ─── Generated / scratch artifacts ──────────────────────────────────────────
+# temporary smoke scripts (_smoke*, etc.)
+scripts/_*.ts
+# Murf triage clips are streamed, never committed
+*.mp3
+*.wav
+*.tmp
+tmp/
+
+# ─── Agent / tooling dirs ───────────────────────────────────────────────────
+.agents/
+.codex/
+.claude/
+.cursor/
+
+# ─── Editors ────────────────────────────────────────────────────────────────
 .vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ─── OS junk ────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+Desktop.ini
+DEMO.md
+DEPLOY.md
+DEVPOST.md
+PROGRESS.md
+SUBMISSION_CHECKLIST.md

@@ -78,6 +78,13 @@ export class McpClient {
     this.initialized = true;
   }
 
+  /** List the tools the server exposes (name + description). */
+  async listTools(): Promise<Array<{ name: string; description?: string }>> {
+    if (!this.initialized) await this.connect();
+    const result = await this.request('tools/list', {});
+    return Array.isArray(result?.tools) ? result.tools : [];
+  }
+
   /** Call a tool by name and return its (parsed) result. */
   async callTool(name: string, args: Record<string, unknown>): Promise<McpToolResult> {
     if (!this.initialized) await this.connect();

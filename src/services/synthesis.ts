@@ -125,7 +125,16 @@ export class LlmSynthesisService implements SynthesisService {
       }
       // Enforce the spoken-summary contract regardless of what the model returned.
       triageSummary = clampWords(spokenize(triageSummary));
-      console.log(`[LLM] Triage summary ready (${triageSummary.split(/\s+/).length} words)`);
+
+      // If the model was too terse for a ~15s clip, use the fuller deterministic
+      // summary instead (keeps the LLM's recommendation).
+      const words = triageSummary.split(/\s+/).filter(Boolean).length;
+      if (words < 18) {
+        console.log(`[LLM] summary too short (${words}w) → using deterministic summary for audio`);
+        triageSummary = (await this.fallback.recommend(prior, code)).triageSummary;
+      }
+
+      console.log(`[LLM] Triage summary ready (${triageSummary.split(/\s+/).filter(Boolean).length} words)`);
       return { recommendation, triageSummary };
     } catch (err) {
       console.log(`[LLM] ERROR — ${(err as Error).message} → deterministic synthesis`);
@@ -137,10 +146,15 @@ export class LlmSynthesisService implements SynthesisService {
 const SYSTEM_PROMPT =
   'You are Rewynd, an incident-triage synthesizer. You reconcile how a team ' +
   'previously fixed an error with how the current code looks now, and produce a ' +
-  'concrete recommendation for THIS code plus one short spoken triage summary. ' +
+  'concrete recommendation for THIS code plus one spoken triage summary. ' +
   'Rules: If the code has DRIFTED from the fix era, say the old fix needs adaptation ' +
-  'and why. The triageSummary must be <= 40 words, natural spoken English, and must ' +
-  'contain NO file paths, NO line numbers, and NO code — it will be read aloud. ' +
+  'and why. ' +
+  'The triageSummary is read ALOUD as a ~15-second clip, so it must be 30–40 words ' +
+  '(never fewer than 30) of natural spoken English that a tired on-call engineer can ' +
+  'act on. It must briefly say: (1) what the error is in plain terms, (2) that the ' +
+  'team has hit it before and roughly when/who resolved it, (3) whether the current ' +
+  'code still matches that fix, and (4) what to do now. It must contain NO file paths, ' +
+  'NO line numbers, and NO code. ' +
   'Reply with ONLY a JSON object: {"recommendation": string, "triageSummary": string}.';
 
 function buildUserPrompt(prior: PriorIncident | null, code: CodeGrounding): string {
@@ -158,7 +172,8 @@ function buildUserPrompt(prior: PriorIncident | null, code: CodeGrounding): stri
     'DIFF VS FIX ERA:',
     code.diffVsFixEra,
     '',
-    'Produce the JSON now.',
+    'Produce the JSON now. Remember: triageSummary must be 30–40 spoken words (~15 seconds) ' +
+      'that explain the error, the prior fix, whether it still applies, and the next step.',
   ].join('\n');
 }
 
