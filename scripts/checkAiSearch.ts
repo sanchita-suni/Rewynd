@@ -23,7 +23,7 @@ Layer 3 (Real-Time Search / MemoryService). To get a sandbox that has it:
      sandbox will NOT expose assistant.search.* methods).
   3. In the sandbox workspace: Settings → Slack AI → enable Slack AI, then
      enable AI Search.
-  4. Reinstall the EchoOps app to the sandbox and add the OAuth scope
+  4. Reinstall the Rewynd app to the sandbox and add the OAuth scope
      'search:read' (plus any assistant scopes Slack lists for search).
   5. Re-run:  npm run check:ai-search
 

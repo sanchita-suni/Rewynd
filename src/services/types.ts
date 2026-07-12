@@ -1,5 +1,5 @@
 /**
- * Typed service contracts for EchoOps' four intelligence layers.
+ * Typed service contracts for Rewynd' four intelligence layers.
  *
  * Every layer is defined as an interface here and implemented with MOCK data in
  * this repository state. Each mock is a drop-in for a real integration that
@@ -70,8 +70,22 @@ export interface Synthesis {
 
 /** Rendered voice output for the triage summary. */
 export interface VoiceRendering {
-  /** URL to a playable audio file of the triage summary. */
+  /** URL to a playable audio file of the triage summary (provider-hosted). */
   audioUrl: string;
+  /** Raw audio bytes, when available, so we can upload a native Slack player. */
+  audioData?: Buffer;
+  /** MIME type of `audioData` (e.g. "audio/mpeg"). */
+  contentType?: string;
+  /** Clip length in seconds, if the provider reports it. */
+  lengthSeconds?: number;
+  /** True when this is the mock/placeholder rendering rather than real TTS. */
+  isMock?: boolean;
+}
+
+/** A follow-up issue opened via the confirm button. */
+export interface CreatedIssue {
+  number: number;
+  url: string;
 }
 
 export interface MemoryService {

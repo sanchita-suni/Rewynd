@@ -1,0 +1,45 @@
+# Render deploy for Rewynd (always-on Background Worker — Socket Mode needs no port).
+# Docs: DEPLOY.md. Set the secret values in the Render dashboard (sync:false).
+services:
+  - type: worker
+    name: rewynd
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    autoDeploy: true
+    envVars:
+      # ── required ──
+      - key: SLACK_BOT_TOKEN
+        sync: false
+      - key: SLACK_APP_TOKEN
+        sync: false
+      - key: INCIDENT_CHANNEL
+        value: incident-response
+      - key: SEED_CHANNEL
+        value: incident-response
+      # ── GitHub MCP (grounding + confirm-gated issue write) ──
+      - key: GITHUB_TOKEN
+        sync: false
+      - key: GITHUB_REPO
+        sync: false
+      - key: GITHUB_MCP_URL
+        value: https://api.githubcopilot.com/mcp/
+      # ── synthesis LLM (optional — OpenAI-compatible; e.g. Groq free tier) ──
+      - key: LLM_BASE_URL
+        sync: false
+      - key: LLM_MODEL
+        sync: false
+      - key: LLM_API_KEY
+        sync: false
+      # ── voice (optional — Murf) ──
+      - key: MURF_API_KEY
+        sync: false
+      - key: MURF_VOICE_ID
+        value: en-US-natalie
+      # ── runtime ──
+      - key: SOCKET_MODE
+        value: "true"
+      - key: LOG_LEVEL
+        value: info

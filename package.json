@@ -1,7 +1,7 @@
 {
-  "name": "echoops",
+  "name": "rewynd",
   "version": "0.1.0",
-  "description": "EchoOps — a Slack incident-response agent that grounds stack traces in prior incidents, live code, AI synthesis, and voice triage.",
+  "description": "Rewynd — a Slack incident-response agent that grounds stack traces in prior incidents, live code, AI synthesis, and voice triage.",
   "private": true,
   "type": "commonjs",
   "main": "dist/app.js",
@@ -10,7 +10,10 @@
     "typecheck": "tsc --noEmit",
     "start": "node dist/app.js",
     "dev": "ts-node-dev --respawn --transpile-only src/app.ts",
-    "check:ai-search": "ts-node scripts/checkAiSearch.ts"
+    "check:ai-search": "ts-node scripts/checkAiSearch.ts",
+    "check:layer2": "ts-node scripts/checkLayer2.ts",
+    "check:layer3": "ts-node scripts/checkLayer3.ts",
+    "seed": "ts-node scripts/seedHistory.ts"
   },
   "dependencies": {
     "@slack/bolt": "^4.2.0",

@@ -38,6 +38,6 @@ registerActionListeners(app);
   const mode = config.slack.socketMode ? 'Socket Mode' : `HTTP :${config.slack.port}`;
   // eslint-disable-next-line no-console
   console.log(
-    `⚡️ EchoOps is running (${mode}). Listening in #${config.slack.incidentChannel} for stack traces.`,
+    `⚡️ Rewynd is running (${mode}). Listening in #${config.slack.incidentChannel} for stack traces.`,
   );
 })();

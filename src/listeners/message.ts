@@ -84,7 +84,7 @@ export function registerMessageListener(app: App): void {
       await client.chat.postMessage({
         channel: m.channel,
         thread_ts: m.thread_ts ?? m.ts,
-        text: `:warning: EchoOps hit an error while triaging this incident: ${(err as Error).message}`,
+        text: `:warning: Rewynd hit an error while triaging this incident: ${(err as Error).message}`,
       });
     }
   });

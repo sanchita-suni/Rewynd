@@ -1,0 +1,14 @@
+%% Rewynd architecture — source for docs/architecture.svg
+%% Render with: npx -p @mermaid-js/mermaid-cli mmdc -i docs/architecture.mmd -o docs/architecture.svg
+flowchart TD
+    A["P1 stack trace posted in #incident-response"] --> B["Bolt-JS event listener<br/>(stack-trace heuristic gate)"]
+    B --> C["RTS API (Real-Time Search)<br/>question-form semantic query<br/>→ prior incident + resolver + fix thread"]
+    B --> D["GitHub MCP server<br/>→ current file:line + diff vs past-fix era<br/>→ MATCH / DRIFTED"]
+    C --> E["Synthesis (OpenAI-compatible LLM)<br/>reconcile past fix × current code<br/>→ recommendation + ONE triage summary"]
+    D --> E
+    E --> F["Murf TTS<br/>~15s spoken triage (summary only)"]
+    E --> G["Block Kit card<br/>verdict banner · audio · detail · confirm"]
+    F --> G
+    G -->|user taps Confirm| H["GitHub MCP: open follow-up issue<br/>+ annotate incident thread (re-capture)"]
+
+    %% RTS + MCP are the two load-bearing required Slack technologies.

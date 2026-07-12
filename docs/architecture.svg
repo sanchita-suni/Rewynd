@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="880" viewBox="0 0 960 880" font-family="'Segoe UI', Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#5f6368"/>
+    </marker>
+    <style>
+      .box { rx: 10; ry: 10; stroke-width: 2; }
+      .t { fill: #202124; font-size: 14px; }
+      .tb { fill: #202124; font-size: 14px; font-weight: 700; }
+      .sub { fill: #3c4043; font-size: 12px; }
+      .edge { stroke: #5f6368; stroke-width: 1.6; fill: none; }
+      .elabel { fill: #5f6368; font-size: 11px; font-style: italic; }
+    </style>
+  </defs>
+
+  <!-- white card so text stays readable in light AND dark themes -->
+  <rect x="0" y="0" width="960" height="880" rx="14" fill="#ffffff"/>
+
+  <text x="480" y="34" text-anchor="middle" class="tb" font-size="20">Rewynd — institutional-memory incident responder</text>
+  <text x="480" y="56" text-anchor="middle" class="sub" font-size="13">Bolt-JS · Real-Time Search + GitHub MCP are the two load-bearing required Slack technologies</text>
+
+  <!-- A -->
+  <rect class="box" x="290" y="78" width="380" height="52" fill="#e8f0fe" stroke="#4285f4"/>
+  <text x="480" y="110" text-anchor="middle" class="tb">P1 stack trace posted in #incident-response</text>
+
+  <!-- B -->
+  <rect class="box" x="320" y="166" width="320" height="58" fill="#f1f3f4" stroke="#9aa0a6"/>
+  <text x="480" y="191" text-anchor="middle" class="tb">Bolt-JS event listener</text>
+  <text x="480" y="210" text-anchor="middle" class="sub">stack-trace heuristic gate</text>
+
+  <!-- C (RTS) -->
+  <rect class="box" x="55" y="270" width="390" height="92" fill="#e6f4ea" stroke="#34a853"/>
+  <text x="250" y="296" text-anchor="middle" class="tb">① RTS API — Real-Time Search</text>
+  <text x="250" y="316" text-anchor="middle" class="sub">question-form semantic query over history</text>
+  <text x="250" y="334" text-anchor="middle" class="sub">→ prior incident + resolver + fix thread</text>
+  <text x="250" y="352" text-anchor="middle" class="elabel">the memory engine (hero)</text>
+
+  <!-- D (MCP) -->
+  <rect class="box" x="515" y="270" width="390" height="92" fill="#fce8e6" stroke="#ea4335"/>
+  <text x="710" y="296" text-anchor="middle" class="tb">② GitHub MCP server</text>
+  <text x="710" y="316" text-anchor="middle" class="sub">current file:line + diff vs past-fix era</text>
+  <text x="710" y="334" text-anchor="middle" class="sub">→ verdict MATCH / DRIFTED</text>
+  <text x="710" y="352" text-anchor="middle" class="elabel">code grounding + drift validation</text>
+
+  <!-- E (LLM) -->
+  <rect class="box" x="210" y="404" width="540" height="82" fill="#fef7e0" stroke="#fbbc04"/>
+  <text x="480" y="430" text-anchor="middle" class="tb">Synthesis — OpenAI-compatible LLM (Groq / OpenRouter / Ollama)</text>
+  <text x="480" y="450" text-anchor="middle" class="sub">reconcile past fix × current code → current-code recommendation</text>
+  <text x="480" y="468" text-anchor="middle" class="sub">+ ONE ≤40-word triage summary (feeds both card text and audio)</text>
+
+  <!-- F (Murf) -->
+  <rect class="box" x="55" y="528" width="390" height="70" fill="#f3e8fd" stroke="#a142f4"/>
+  <text x="250" y="558" text-anchor="middle" class="tb">Murf TTS</text>
+  <text x="250" y="578" text-anchor="middle" class="sub">~15s spoken triage — summary only, never detail</text>
+
+  <!-- G (card) -->
+  <rect class="box" x="515" y="522" width="390" height="82" fill="#e8f0fe" stroke="#4285f4"/>
+  <text x="710" y="548" text-anchor="middle" class="tb">Block Kit card (progressive disclosure)</text>
+  <text x="710" y="568" text-anchor="middle" class="sub">verdict banner · audio player · expandable detail</text>
+  <text x="710" y="586" text-anchor="middle" class="sub">· confirm-gated action button</text>
+
+  <!-- H (write) -->
+  <rect class="box" x="210" y="654" width="540" height="82" fill="#e6f4ea" stroke="#34a853"/>
+  <text x="480" y="680" text-anchor="middle" class="tb">user taps Confirm  →  GitHub MCP: open follow-up issue</text>
+  <text x="480" y="700" text-anchor="middle" class="sub">+ annotate the incident thread (re-capture the knowledge)</text>
+  <text x="480" y="720" text-anchor="middle" class="elabel">human-in-the-loop — nothing writes before the click</text>
+
+  <!-- edges -->
+  <path class="edge" d="M480,130 L480,166" marker-end="url(#arrow)"/>
+  <path class="edge" d="M430,224 C360,244 300,250 260,270" marker-end="url(#arrow)"/>
+  <path class="edge" d="M530,224 C600,244 660,250 700,270" marker-end="url(#arrow)"/>
+  <path class="edge" d="M300,362 C340,384 380,392 420,404" marker-end="url(#arrow)"/>
+  <path class="edge" d="M660,362 C620,384 580,392 540,404" marker-end="url(#arrow)"/>
+  <path class="edge" d="M400,486 C340,502 300,512 260,528" marker-end="url(#arrow)"/>
+  <path class="edge" d="M560,486 C620,502 660,510 700,522" marker-end="url(#arrow)"/>
+  <path class="edge" d="M445,566 L515,560" marker-end="url(#arrow)"/>
+  <text x="470" y="556" text-anchor="middle" class="elabel">audio</text>
+  <path class="edge" d="M690,604 C640,626 600,634 560,654" marker-end="url(#arrow)"/>
+  <text x="648" y="632" text-anchor="middle" class="elabel">Confirm</text>
+</svg>
