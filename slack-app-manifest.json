@@ -1,0 +1,60 @@
+{
+  "display_information": {
+    "name": "Rewynd",
+    "description": "Institutional-memory incident responder - recovers how your team fixed this before.",
+    "background_color": "#1a1d29"
+  },
+  "features": {
+    "bot_user": {
+      "display_name": "Rewynd",
+      "always_online": true
+    },
+    "assistant_view": {
+      "assistant_description": "Paste a stack trace and I'll find how your team fixed it before, and whether that fix still applies to your current code.",
+      "suggested_prompts": [
+        {
+          "title": "Triage a checkout ETIMEDOUT",
+          "message": "Error: connect ETIMEDOUT 10.0.3.14:443\n    at PaymentGateway.charge (src/checkout/payments.ts:42:15)"
+        }
+      ]
+    }
+  },
+  "oauth_config": {
+    "scopes": {
+      "bot": [
+        "chat:write",
+        "channels:history",
+        "channels:read",
+        "groups:history",
+        "groups:read",
+        "users:read",
+        "files:write",
+        "assistant:write",
+        "im:history",
+        "search:read.public",
+        "search:read.private",
+        "search:read.im",
+        "search:read.mpim",
+        "search:read.files",
+        "search:read.users"
+      ]
+    }
+  },
+  "settings": {
+    "event_subscriptions": {
+      "bot_events": [
+        "message.channels",
+        "message.groups",
+        "message.im",
+        "assistant_thread_started",
+        "assistant_thread_context_changed"
+      ]
+    },
+    "interactivity": {
+      "is_enabled": true
+    },
+    "socket_mode_enabled": true,
+    "org_deploy_enabled": false,
+    "token_rotation_enabled": false
+  }
+}

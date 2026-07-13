@@ -44,6 +44,9 @@ export const config = {
     token: optional('GITHUB_TOKEN', ''),
     // "owner/name" of the repo the incident code lives in.
     repo: optional('GITHUB_REPO', ''),
+    // Optional path-prefix routing, e.g.
+    // "src/checkout=sanchita-suni/checkout-service,services/billing=acme/billing"
+    repoMap: optional('GITHUB_REPO_MAP', ''),
     defaultBranch: optional('GITHUB_DEFAULT_BRANCH', 'main'),
   },
   // Synthesis LLM (Layer 3 — SynthesisService). Any OpenAI-compatible chat

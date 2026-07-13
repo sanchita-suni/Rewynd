@@ -2,7 +2,7 @@ import { CodeGrounding, CodeService, ErrorSignature } from './types';
 import { config } from '../config';
 import { recallIncident, FixEraRef } from '../orchestrator/incidentContext';
 import { McpClient } from './mcp';
-import { getGithubMcp, parseRepo } from './github';
+import { getGithubMcp, repoSlug, resolveRepoForPath } from './github';
 import { computeDrift, extractSnippet } from './diff';
 
 /**
@@ -13,7 +13,9 @@ export class MockCodeService implements CodeService {
   async groundError(errorSignature: ErrorSignature): Promise<CodeGrounding> {
     const file = errorSignature.topFile ?? 'src/checkout/payments.ts';
     const line = errorSignature.topLine ?? 42;
+    const repo = resolveRepoForPath(file);
     return {
+      repoSlug: repo ? repoSlug(repo) : undefined,
       file,
       line,
       currentSnippet: [
@@ -51,7 +53,7 @@ export class RealCodeService implements CodeService {
   }
 
   async groundError(sig: ErrorSignature): Promise<CodeGrounding> {
-    const repo = parseRepo(config.github.repo);
+    const repo = resolveRepoForPath(sig.topFile);
     if (!repo || !config.github.token) {
       console.log('[MCP] GitHub MCP not configured (GITHUB_REPO / GITHUB_TOKEN) → mock grounding');
       return this.fallback.groundError(sig);
@@ -62,6 +64,7 @@ export class RealCodeService implements CodeService {
     }
 
     const { owner, name } = repo;
+    const selectedRepo = repoSlug(repo);
     const file = sig.topFile;
     const line = sig.topLine;
     const branch = config.github.defaultBranch;
@@ -85,6 +88,7 @@ export class RealCodeService implements CodeService {
           `[MCP] GitHub → current ${file}:${line} grounded → no prior fix-era to compare`,
         );
         return {
+          repoSlug: selectedRepo,
           file,
           line,
           currentSnippet,
@@ -101,6 +105,7 @@ export class RealCodeService implements CodeService {
           `[MCP] GitHub → current ${file}:${line} diffed vs fix-era → DRIFTED (fix era unverifiable)`,
         );
         return {
+          repoSlug: selectedRepo,
           file,
           line,
           currentSnippet,
@@ -118,12 +123,13 @@ export class RealCodeService implements CodeService {
       const reason = verdict === 'MATCH' ? 'fix still applies' : 'region changed since fix';
       console.log(`[MCP] GitHub → current ${file}:${line} diffed vs fix-era → ${verdict} (${reason})`);
 
-      return { file, line, currentSnippet, diffVsFixEra: diffText, verdict };
+      return { repoSlug: selectedRepo, file, line, currentSnippet, diffVsFixEra: diffText, verdict };
     } catch (err) {
       // Honest degrade: surface the grounding failure rather than fake a diff.
       console.log(`[MCP] ERROR — ${(err as Error).message} → grounding unavailable`);
       const hasPrior = Boolean(recallIncident(sig.signature)?.prior);
       return {
+        repoSlug: selectedRepo,
         file,
         line,
         currentSnippet: `⚠️ Could not fetch current code from GitHub MCP: ${(err as Error).message}`,
@@ -139,7 +145,16 @@ export class RealCodeService implements CodeService {
     return this.mcp;
   }
 
-  /** get_file_contents at a ref, decoded to plain text. */
+  /**
+   * get_file_contents at a ref, decoded to plain text.
+   *
+   * The GitHub MCP tool is picky, and getting this wrong fails *silently*:
+   *   - `ref` must be FULLY QUALIFIED (`refs/heads/main`), not a bare branch name.
+   *   - a bare commit SHA must go in `sha` (which takes precedence over `ref`).
+   * Passing a raw SHA as `ref` is ignored and you get the default branch back —
+   * which means you end up diffing main against main and every incident looks
+   * like a MATCH.
+   */
   private async getFile(
     mcp: McpClient,
     owner: string,
@@ -147,7 +162,34 @@ export class RealCodeService implements CodeService {
     path: string,
     ref: string,
   ): Promise<string> {
-    const text = await mcp.callToolText('get_file_contents', { owner, repo, path, ref });
+    const args: Record<string, unknown> = { owner, repo, path };
+    if (/^[0-9a-f]{7,40}$/i.test(ref)) {
+      args.sha = ref; // commit SHA
+    } else {
+      args.ref = ref.startsWith('refs/') ? ref : `refs/heads/${ref}`; // branch/tag
+    }
+
+    const res = await mcp.callTool('get_file_contents', args);
+    if (res.isError) {
+      const msg = res.content.map((c) => c.text ?? '').join(' ');
+      throw new Error(`get_file_contents failed: ${msg || 'unknown'}`);
+    }
+
+    // The GitHub MCP replies with TWO items: a `text` status line ("successfully
+    // downloaded text file…") and a `resource` item whose `.text` is the actual
+    // file. Take the resource — reading the status line as source code silently
+    // yields a 1-line "file" and every diff then looks like a MATCH.
+    for (const item of res.content as Array<{ type: string; resource?: { text?: string } }>) {
+      if (item.type === 'resource' && typeof item.resource?.text === 'string') {
+        return item.resource.text;
+      }
+    }
+
+    // Other MCP servers inline the file in `text` items instead.
+    const text = res.content
+      .filter((c) => c.type === 'text' && typeof c.text === 'string')
+      .map((c) => c.text as string)
+      .join('\n');
     return decodeFileContent(text);
   }
 

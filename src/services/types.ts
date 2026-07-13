@@ -45,6 +45,8 @@ export type CodeVerdict = 'MATCH' | 'DRIFTED';
 
 /** Result of grounding a stack trace against live source code. */
 export interface CodeGrounding {
+  /** Repository selected for this stack trace, as owner/name. */
+  repoSlug?: string;
   /** File the top meaningful frame points at. */
   file: string;
   /** Line number within that file. */

@@ -10,6 +10,7 @@ import {
   recallIncident,
   rememberIncident,
 } from '../orchestrator/incidentContext';
+import { looksLikeStackTrace } from '../util/stackTrace';
 import {
   RtsMessage,
   buildKeywordQuery,
@@ -216,16 +217,30 @@ export class RealMemoryService implements MemoryService {
     return parseRtsMessages(raw);
   }
 
-  /** Prefer resolution-flavored messages, then highest score, then first. */
+  /**
+   * Pick the message that actually explains HOW it was fixed.
+   *
+   * Semantic search happily returns other *occurrences* of the same stack trace —
+   * they're the closest match, but they're incident reports, not resolutions.
+   * So drop raw stack-trace posts and rank anything that reads like a fix
+   * (a "resolved/fixed by" phrase, a PR/commit link) above everything else.
+   */
   private pickBest(messages: RtsMessage[]): RtsMessage | undefined {
     if (messages.length === 0) return undefined;
-    const scored = [...messages].sort((a, b) => {
-      const ra = looksLikeResolution(a.text) ? 1 : 0;
-      const rb = looksLikeResolution(b.text) ? 1 : 0;
-      if (ra !== rb) return rb - ra;
-      return (b.score ?? 0) - (a.score ?? 0);
-    });
-    return scored[0];
+
+    const rank = (m: RtsMessage): number => {
+      let s = m.score ?? 0;
+      if (looksLikeResolution(m.text)) s += 10;
+      if (/\b(resolved|fixed|patched)\s+by\b/i.test(m.text)) s += 5;
+      if (/github\.com\/[^\s]+\/(pull|commit)\//i.test(m.text)) s += 5;
+      return s;
+    };
+
+    // Incident reports (raw traces) are never the answer — exclude them first.
+    const resolutions = messages.filter((m) => !looksLikeStackTrace(m.text).isStackTrace);
+    const pool = resolutions.length > 0 ? resolutions : messages;
+
+    return [...pool].sort((a, b) => rank(b) - rank(a))[0];
   }
 
   private async toPriorIncident(m: RtsMessage): Promise<PriorIncident> {

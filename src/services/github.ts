@@ -22,7 +22,41 @@ export function parseRepo(repo: string): Repo | null {
 }
 
 export function isGithubConfigured(): boolean {
-  return Boolean(parseRepo(config.github.repo) && config.github.token);
+  return Boolean(config.github.token && (parseRepo(config.github.repo) || repoMapEntries().length > 0));
+}
+
+export function repoSlug(repo: Repo): string {
+  return `${repo.owner}/${repo.name}`;
+}
+
+export function resolveRepoForPath(path?: string, explicitRepo?: string): Repo | null {
+  if (explicitRepo) return parseRepo(explicitRepo);
+
+  const normalized = normalizePath(path ?? '');
+  const match = repoMapEntries()
+    .filter((entry) => normalized === entry.prefix || normalized.startsWith(`${entry.prefix}/`))
+    .sort((a, b) => b.prefix.length - a.prefix.length)[0];
+  if (match) return match.repo;
+
+  return parseRepo(config.github.repo);
+}
+
+function repoMapEntries(): Array<{ prefix: string; repo: Repo }> {
+  return config.github.repoMap
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .map((entry) => {
+      const [prefixRaw, repoRaw] = entry.split('=').map((part) => part?.trim());
+      const repo = parseRepo(repoRaw ?? '');
+      if (!prefixRaw || !repo) return null;
+      return { prefix: normalizePath(prefixRaw).replace(/\/+$/, ''), repo };
+    })
+    .filter((entry): entry is { prefix: string; repo: Repo } => Boolean(entry));
+}
+
+function normalizePath(path: string): string {
+  return path.replace(/\\/g, '/').replace(/^\.\//, '').replace(/^\/+/, '');
 }
 
 export function getGithubMcp(): McpClient {
@@ -94,9 +128,10 @@ export async function createFollowUpIssue(args: {
   title: string;
   body: string;
   labels?: string[];
+  repoSlug?: string;
 }): Promise<CreatedIssue> {
-  const repo = parseRepo(config.github.repo);
-  if (!repo) throw new Error('GITHUB_REPO is not set (owner/name)');
+  const repo = resolveRepoForPath(undefined, args.repoSlug);
+  if (!repo) throw new Error('GITHUB_REPO or GITHUB_REPO_MAP is not set');
   if (!config.github.token) throw new Error('GITHUB_TOKEN is not set');
 
   const mcp = getGithubMcp();

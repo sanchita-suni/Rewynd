@@ -103,8 +103,12 @@ export function registerActionListeners(app: App): void {
     }
 
     try {
-      console.log(`[MCP] Creating follow-up issue in ${process.env.GITHUB_REPO ?? 'repo'} …`);
-      const issue: CreatedIssue = await createFollowUpIssue({ title, body: bodyMd });
+      console.log(`[MCP] Creating follow-up issue in ${code.repoSlug ?? process.env.GITHUB_REPO ?? 'repo'} …`);
+      const issue: CreatedIssue = await createFollowUpIssue({
+        title,
+        body: bodyMd,
+        repoSlug: code.repoSlug,
+      });
       console.log(`[MCP] GitHub → follow-up issue created: #${issue.number} ${issue.url}`);
 
       // Remember it so re-renders keep the "created" state.

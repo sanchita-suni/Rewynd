@@ -1,147 +1,156 @@
 # Rewynd
 
-### Your team already fixed this. I'll find out how.
+### Your team already fixed this. I'll tell you whether that fix still works.
 
-**Rewynd is an institutional-memory incident responder for Slack.** When a P1
-stack trace lands in `#incident-response`, Rewynd recovers **how your own team
-fixed this exact error last time**, **validates that fix against your current
-code**, speaks a ~15-second triage summary, and — on one human click —
-**re-captures the knowledge** as a tracked issue so you stop paying the same tax
-twice.
-
-Built for the **Slack Agent Builder Challenge** (New Slack Agent track).
+A Slack agent for the 2am incident your team has already solved — and forgotten.
 
 ---
 
-## The problem
+## The problem with "we've seen this before"
 
-Every engineering org has already solved most of its incidents. The fix is buried
-in a Slack thread from eight months ago, and the person who wrote it is asleep. So
-at 2am the on-call engineer re-solves it from scratch. That is knowledge decay,
-and it is the single highest-pain, most-repeated moment in on-call work.
+Every engineering org has already solved most of its incidents. The fix is buried in
+a Slack thread from eight months ago, and the person who wrote it is asleep. So the
+on-call engineer re-solves it from scratch.
 
-Slack's Real-Time Search pitch is *"unlock institutional knowledge trapped in
-conversations."* Rewynd is the sharpest instance of exactly that thesis, pointed
-at the incident channel.
+Plenty of tools will resurface that old thread. **That's the easy half, and on its
+own it's dangerous** — because the code has moved on. The fix that worked in March
+may have been refactored away in June. Handing someone a stale patch with confidence
+is worse than handing them nothing.
+
+**So Rewynd doesn't stop at remembering. It checks whether the old fix survived.**
+
+When a stack trace lands, Rewynd finds the thread where you fixed it before, then
+pulls the **commit from the era of that fix** and diffs it against the code running
+today:
+
+```
+✅ Seen before · fixed by @trish · Jul 2026 · current code MATCHES — the fix still applies
+⚠️ Seen before · fixed by @trish · Jul 2026 · code has since DRIFTED — the old fix may not apply
+```
+
+That second line is the whole product. It's the difference between institutional
+memory and institutional *judgment*.
+
+---
 
 ## What it does
 
-1. **Detects** a stack trace posted in `#incident-response` (a lightweight
-   heuristic — exception keywords, `file:line` patterns, multi-line traces).
-2. **Remembers** — queries workspace history with a *natural-language question* so
-   Real-Time Search runs semantic retrieval, and returns the prior thread, **who**
-   resolved it, **when**, and the linked fix/PR.
-3. **Grounds** — pulls the current `file:line` from your repo via the GitHub MCP
-   server and **diffs it against the fix-era commit**: does the old fix still apply
-   (`MATCH`), or has the code drifted (`DRIFTED`)?
-4. **Synthesizes** — reconciles *[past fix] × [current code]* into a
-   current-code-specific recommendation and **one** ≤40-word triage summary.
-5. **Speaks** — renders that summary to a ~15s Murf clip and posts it as a native
-   audio player in the thread.
-6. **Re-captures** — a confirm-gated **"Open follow-up issue"** button opens a
-   GitHub issue (linking the prior incident + current occurrence + recommendation)
-   and annotates the thread. Nothing writes before the click.
+1. **Notices** a stack trace — in `#incident-response`, or DM'd to the agent.
+2. **Remembers** — recovers the prior thread, who resolved it, when, and the linked fix.
+3. **Grounds it** — via the GitHub MCP server: fetches the current `file:line`, resolves
+   the fix-era commit from the resolution thread, diffs the implicated region →
+   **MATCH** or **DRIFTED**.
+4. **Reconciles** — an LLM turns *[past fix] × [current code]* into a recommendation for
+   the code as it exists *now*. If it drifted, it says so and explains why the old patch
+   won't transfer.
+5. **Speaks** — a ~15s spoken triage summary.
+6. **Re-captures** — one confirm-gated click opens a GitHub issue linking the old
+   incident, the new one, and the recommendation, and annotates the thread.
 
-All of it arrives as **one progressive-disclosure Block Kit card.**
+One progressive-disclosure Block Kit card carries all of it: verdict banner → voice
+summary → expandable detail (file:line, thread deep-link, diff, patch) → confirm button.
 
-## The card (UX thesis: right modality per layer)
+## Two front doors, and the reason why
 
-```
-✅  Seen before · fixed by @trish · Mar 2026 · current code MATCHES — the fix still applies
-    Signature: ETIMEDOUT @ src/checkout/payments.ts:42
-🔊  ~15s voice triage — ▶️ playable clip posted in this thread
-    "Good news — your team already solved this. Trish fixed it in March…"
-    ────────────────────────────────────────────────
-    [ Show details ]   [ Open follow-up issue ]
-```
+`assistant.search.context` — Slack's Real-Time Search — requires an **`action_token`**.
+Slack only attaches that token to **agent-surface** events. It is *never* present on a
+plain channel message. A channel-only agent therefore **cannot** run semantic search,
+no matter what scopes it holds.
 
-**The rule that keeps this from being a gimmick:** *audio is the summary layer;
-text is the detail carrier.* The banner is the glance. The audio is the gist for
-hands-busy/mobile/2am. Every line number, the prior-thread deep link, the diff,
-and the recommended patch live in the **expandable text detail** — audio never
-carries a line number.
+So Rewynd runs on both surfaces, with the same orchestrator:
 
-## The required Slack technologies — each load-bearing
+| Surface | Memory |
+|---|---|
+| **Agent DM** | `action_token` present → **Real-Time Search**, as a natural-language question query (semantic retrieval) |
+| **`#incident-response`** | no token → workspace conversation-history search |
 
-The challenge asks for **≥1** of three technologies. Rewynd leans on **two as
-genuinely load-bearing**, plus a reasoning layer and a voice layer:
+The logs always name the path that actually ran (`via semantic RTS` / `via
+channel-history fallback`). Rewynd never claims a capability it didn't use.
 
-| # | Technology | Role in Rewynd | Load-bearing? |
-|---|------------|-----------------|---------------|
-| 1 | **Real-Time Search API** | The memory engine. A *question-form* semantic query recovers the prior incident thread, resolver, and fix. Remove it and there is no "your team already fixed this." | **Yes — the hero** |
-| 2 | **MCP (GitHub MCP server)** | Grounds the current `file:line`, diffs it vs the fix era (MATCH/DRIFTED), and performs the confirm-gated issue write. Remove it and the agent can't tell if the old fix still applies or close the loop. | **Yes** |
-| – | Synthesis (LLM) | Reconciles past fix × current code into the recommendation + triage summary. Runs on any **OpenAI-compatible / open-source** endpoint (Groq, OpenRouter, local Ollama). | Reasoning layer |
-| – | Voice (Murf) | Renders the ≤40-word summary to a ~15s spoken clip. The *summary modality*, not the differentiator. | UX layer |
+## Technologies
 
-> **An honest note for judges:** Slack AI is a set of product features, not a
-> callable text-completion API, so Rewynd does its synthesis on an open-source /
-> free-tier LLM rather than "calling Slack AI." The two Slack technologies it
-> genuinely uses — **RTS + MCP** — are both load-bearing, which satisfies the
-> requirement with margin.
+The challenge requires at least one of *Slack AI capabilities · MCP server integration ·
+Real-Time Search API*. Rewynd uses two, both load-bearing:
+
+**MCP server integration** — a from-scratch MCP client (Streamable HTTP: `initialize` →
+`tools/list` → `tools/call`, handling both JSON and SSE responses) driving the GitHub MCP
+server. It calls `get_file_contents` and `list_commits` to ground the error and pin the
+fix era, and `issue_write` to file the follow-up issue. Remove MCP and Rewynd can't tell
+you whether the fix still applies, nor close the loop.
+
+**Real-Time Search API** — `assistant.search.context` with question-form queries
+(*"How was the ETIMEDOUT error in payments resolved before?"*), which is what triggers
+semantic rather than keyword retrieval.
+
+Synthesis runs on any OpenAI-compatible endpoint (Groq / OpenRouter / local Ollama) —
+Slack AI is a set of product features, not a callable completion API, so Rewynd doesn't
+pretend to "call Slack AI." Voice is Murf.
+
+## Design notes
+
+**Nothing writes before a human clicks.** The GitHub issue is created only on confirm,
+behind a dialog. This is also why the trigger can afford to be a cheap heuristic
+(exception keywords, `file:line`, multi-line frames): the cost of a false positive is a
+collapsed card someone ignores, not a spurious write to your repo.
+
+**Audio is the summary layer; text is the detail carrier.** The spoken clip is for the
+responder who is heads-down in a terminal or on their phone at 2am — it carries the
+verdict and the gist, and it is explicitly sanitised so no file path or line number ever
+reaches the audio. Every copy-pasteable thing lives in text.
+
+**Everything degrades honestly.** RTS unavailable → history search. MCP unreachable →
+grounding marked unavailable, and if a prior fix exists Rewynd stays cautious rather than
+claiming it still applies. No LLM configured → deterministic synthesis. No Murf → a
+text-only card. It never fabricates a match.
 
 ## Architecture
 
 ![Rewynd architecture](docs/architecture.svg)
 
-*(Source: [`docs/architecture.mmd`](docs/architecture.mmd).)*
-
 ```
-message → listeners/message.ts (heuristic)
-        → orchestrator: memory(RTS) → code(GitHub MCP) → synthesis(LLM) → voice(Murf)
-        → blocks/incidentCard.ts (progressive-disclosure card) → threaded reply + audio player
-   Confirm → listeners/actions.ts → GitHub MCP create_issue + thread annotation
+message → heuristic gate
+        → memory (RTS | history) → code (GitHub MCP: file:line + fix-era diff)
+        → synthesis (LLM) → voice (Murf)
+        → progressive-disclosure card
+   confirm → GitHub MCP issue_write + thread annotation
 ```
 
-Each intelligence layer sits behind a typed interface
-([`src/services/types.ts`](src/services/types.ts)); the orchestrator and card only
-ever talk to the interfaces. Every real integration keeps a mock/deterministic
-fallback in the same file and **degrades honestly** rather than fabricating data.
+Each layer sits behind a typed interface (`src/services/types.ts`); the orchestrator and
+the card only ever talk to interfaces, so any integration can be swapped without touching
+the flow.
 
-## Setup
-
-**Prereqs:** Node ≥ 20, a Slack app (Socket Mode), a GitHub token + repo, an
-OpenAI-compatible LLM endpoint (optional), a Murf API key (optional).
+## Running it
 
 ```bash
 npm install
-cp .env.example .env      # fill in the values below
-npm run check:ai-search   # confirm Slack AI Search (needed for semantic RTS)
-npm run seed              # plant a historical incident thread for RTS to find
-npm run dev               # or: npm run build && npm start
+cp .env.example .env        # Slack tokens, GITHUB_TOKEN/GITHUB_REPO, optional LLM + Murf
+npm run seed                # plant a historical incident for Rewynd to find
+npm run dev
 ```
 
-**Slack app scopes** (bot): `chat:write`, `channels:history`, `channels:read`,
-`groups:history`, `groups:read`, `search:read` (RTS), `users:read`, `files:write`
-(audio upload). **App-level token:** `connections:write`. Semantic RTS also needs
-**Slack AI Search** enabled on the workspace.
+Then paste a stack trace into `#incident-response`, or DM the agent.
 
-**Key env vars** (see [`.env.example`](.env.example) for the full list):
+**Slack app:** create it from [`slack-app-manifest.json`](slack-app-manifest.json)
+(Socket Mode, Agents & AI Apps enabled, and *App Home → allow users to send messages*).
 
-| Var | Purpose |
-|-----|---------|
-| `SLACK_BOT_TOKEN`, `SLACK_APP_TOKEN` | Slack app (Socket Mode) |
-| `INCIDENT_CHANNEL`, `SEED_CHANNEL` | channel to watch / seed a prior thread into |
-| `GITHUB_TOKEN`, `GITHUB_REPO`, `GITHUB_MCP_URL` | GitHub MCP grounding + issue write |
-| `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY` | OpenAI-compatible synthesis LLM (optional) |
-| `MURF_API_KEY`, `MURF_VOICE_ID` | Murf TTS (optional) |
-| `USE_MOCKS=true` | run the whole demo offline from mock data |
+**Checks:** `npm run check:ai-search` (is Slack AI Search on?) ·
+`npm run check:layer2` / `check:layer3` (offline self-tests of the search/diff/synthesis
+logic — no credentials needed).
 
-Then paste a stack trace into `#incident-response` and watch the `[RTS]` / `[MCP]`
-/ `[LLM]` / `[Murf]` logs and the card appear. See
-[**DEMO.md**](DEMO.md) for the 3-minute demo script and
-[**DEPLOY.md**](DEPLOY.md) for always-on hosting (required before judging).
+`USE_MOCKS=true` runs the whole thing offline from fixtures.
 
-## Scripts
+## Layout
 
-| Command | What it does |
-|---------|--------------|
-| `npm run dev` | Run locally (watch mode) |
-| `npm run seed` | Plant a realistic historical incident thread for RTS |
-| `npm run check:ai-search` | Verify the sandbox has Slack AI Search |
-| `npm run check:layer2` | Offline self-test: RTS query/parse + diff/verdict |
-| `npm run check:layer3` | Offline self-test: spoken-summary sanitizer + synthesis + JSON |
-
-## Project status & the mock/real boundary
-
-See [CLAUDE.md](CLAUDE.md) for the architecture deep-dive and the exact mock/real
-boundary, and [PROGRESS.md](PROGRESS.md) for the build log and known gaps.
+```
+src/
+  listeners/message.ts     heuristic gate · both surfaces · action_token · dedupe
+  listeners/actions.ts     detail toggle · confirm-gated issue write
+  orchestrator/            memory → code → synthesis → voice; per-incident cache
+  services/
+    memory.ts              Real-Time Search + conversation-history fallback
+    code.ts                GitHub MCP grounding + fix-era diff (MATCH/DRIFTED)
+    mcp.ts                 MCP client, written from scratch
+    github.ts  llm.ts  rts.ts  diff.ts  synthesis.ts  voice.ts
+  blocks/incidentCard.ts   the card
+  util/stackTrace.ts       detection + signature extraction
+```

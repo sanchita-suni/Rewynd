@@ -35,9 +35,23 @@ Error: connect ETIMEDOUT 10.0.3.14:443
     at Checkout.process (src/checkout/index.ts:120:9)
     at async OrderService.submit (src/orders/service.ts:88:5)`;
 
+/**
+ * Link the REAL fix commit so Rewynd can pin the fix era exactly — this is what a
+ * genuine resolution message looks like, and it's what lets the MCP layer diff
+ * today's code against the code as it was when the fix landed.
+ *
+ *   SEED_FIX_COMMIT=<sha>   (from the checkout-service repo — @trish's fix commit)
+ *
+ * Without it we fall back to a PR link, and the fix era is resolved by date.
+ */
+const FIX_COMMIT = process.env.SEED_FIX_COMMIT?.trim();
+const FIX_REF = FIX_COMMIT
+  ? `https://github.com/${REPO}/commit/${FIX_COMMIT}`
+  : `https://github.com/${REPO}/pull/482`;
+
 const RESOLUTION = `:white_check_mark: Root cause: the payment gateway was dropping connections under load and we had no retry, so checkout threw \`ETIMEDOUT\`.
 
-Resolved by @trish in https://github.com/${REPO}/pull/482 — wrapped the gateway call in an exponential-backoff retry (3 attempts) and raised the socket timeout to 15s; added a checkout-timeout regression test.`;
+Resolved by @trish in ${FIX_REF} — wrapped the gateway call in an exponential-backoff retry (3 attempts) and raised the socket timeout to 15s; added a checkout-timeout regression test.`;
 
 function looksLikeId(v: string): boolean {
   return /^[CGD][A-Z0-9]{6,}$/.test(v);

@@ -16,6 +16,10 @@ const EXCEPTION_KEYWORDS =
 // Typed-exception names like TypeError, NullPointerException, KeyError, IOException.
 const EXCEPTION_TYPE = /\b([A-Z][a-zA-Z0-9]*(?:Error|Exception))\b/;
 
+// Errno-style codes like ETIMEDOUT, ECONNRESET, ENOTFOUND, EACCES.
+// (Negative lookahead keeps a shouty "ERROR"/"EXCEPTION" from matching.)
+const ERRNO_CODE = /\b(E(?!RROR\b|XCEPTION\b)[A-Z]{2,15})\b/;
+
 // file:line references: "src/auth/session.ts:42", "app.py, line 88", "at foo (x.js:12:5)".
 const FILE_LINE =
   /([\w./\\-]+\.(?:ts|tsx|js|jsx|py|rb|go|java|kt|rs|c|cc|cpp|cs|php|scala|swift)):(\d+)/i;
@@ -59,8 +63,10 @@ export function looksLikeStackTrace(text: string): StackTraceMatch {
 
 /** Distill raw error text into an ErrorSignature for the services to match on. */
 export function extractSignature(raw: string): ErrorSignature {
+  // Prefer a typed exception (TypeError); fall back to an errno code (ETIMEDOUT).
   const typeMatch = raw.match(EXCEPTION_TYPE);
-  const errorType = typeMatch?.[1];
+  const errnoMatch = raw.match(ERRNO_CODE);
+  const errorType = typeMatch?.[1] ?? errnoMatch?.[1];
 
   let topFile: string | undefined;
   let topLine: number | undefined;

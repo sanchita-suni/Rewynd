@@ -59,6 +59,7 @@ export function registerMessageListener(app: App): void {
       bot_id?: string;
       text?: string;
       channel?: string;
+      channel_type?: string;
       ts?: string;
       thread_ts?: string;
     };
@@ -79,15 +80,26 @@ export function registerMessageListener(app: App): void {
       (body as any)?.event?.action_token ??
       (body as any)?.action_token;
 
-    const incidentChannelId = await resolveIncidentChannelId(client);
-    if (!incidentChannelId) {
-      logger.warn(
-        `[message] could not resolve incident channel "${config.slack.incidentChannel}". ` +
-          `Set INCIDENT_CHANNEL to a channel ID or invite the bot to the channel.`,
-      );
-      return;
+    // Two surfaces:
+    //  • DM / agent pane  → Slack attaches an `action_token`, so semantic RTS runs.
+    //  • #incident-response → no action_token; memory falls back to history search.
+    const channelType =
+      m.channel_type ??
+      (payload as any)?.channel_type ??
+      (body as any)?.event?.channel_type;
+    const isDirectMessage = channelType === 'im';
+
+    if (!isDirectMessage) {
+      const incidentChannelId = await resolveIncidentChannelId(client);
+      if (!incidentChannelId) {
+        logger.warn(
+          `[message] could not resolve incident channel "${config.slack.incidentChannel}". ` +
+            `Set INCIDENT_CHANNEL to a channel ID or invite the bot to the channel.`,
+        );
+        return;
+      }
+      if (m.channel !== incidentChannelId) return;
     }
-    if (m.channel !== incidentChannelId) return;
 
     const verdict = looksLikeStackTrace(m.text);
     if (!verdict.isStackTrace) {
@@ -95,7 +107,10 @@ export function registerMessageListener(app: App): void {
       return;
     }
 
-    logger.info(`[message] stack trace detected (signals: ${verdict.signals.join(',')}) — triaging`);
+    const surface = isDirectMessage ? 'agent DM' : '#' + config.slack.incidentChannel;
+    logger.info(
+      `[message] stack trace detected on ${surface} (signals: ${verdict.signals.join(',')}) — triaging`,
+    );
     try {
       await runIncident({
         client,

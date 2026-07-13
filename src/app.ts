@@ -26,8 +26,29 @@ const app = new App({
   logLevel: toLogLevel(config.logLevel),
 });
 
+// Diagnostic: set DEBUG_EVENTS=true to print every event Slack delivers.
+// Use this to confirm whether assistant_thread_started / message.im arrive at all.
+if (process.env.DEBUG_EVENTS === 'true') {
+  app.use(async ({ body, next }) => {
+    const b = body as any;
+    const type = b?.event?.type ?? b?.type ?? 'unknown';
+    const subtype = b?.event?.subtype ?? '-';
+    const channelType = b?.event?.channel_type ?? '-';
+    const hasToken = b?.event?.action_token || b?.action_token ? 'yes' : 'no';
+    console.log(
+      `[event] type=${type} subtype=${subtype} channel_type=${channelType} action_token=${hasToken}`,
+    );
+    await next();
+  });
+}
+
 registerMessageListener(app);
 registerActionListeners(app);
+
+// NOTE: we deliberately do NOT use Bolt's Assistant() wrapper. Slack delivers the
+// agent DM as a plain `message` event with channel_type=im — and crucially it
+// carries the `action_token` that semantic Real-Time Search needs. The message
+// listener handles that surface directly (see listeners/message.ts).
 
 (async () => {
   if (config.slack.socketMode) {

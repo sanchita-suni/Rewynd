@@ -17,23 +17,24 @@
   <rect x="0" y="0" width="960" height="880" rx="14" fill="#ffffff"/>
 
   <text x="480" y="34" text-anchor="middle" class="tb" font-size="20">Rewynd — institutional-memory incident responder</text>
-  <text x="480" y="56" text-anchor="middle" class="sub" font-size="13">Bolt-JS · Real-Time Search + GitHub MCP are the two load-bearing required Slack technologies</text>
+  <text x="480" y="56" text-anchor="middle" class="sub" font-size="13">Bolt-JS · GitHub MCP + Real-Time Search are the required Slack technologies used</text>
 
   <!-- A -->
   <rect class="box" x="290" y="78" width="380" height="52" fill="#e8f0fe" stroke="#4285f4"/>
-  <text x="480" y="110" text-anchor="middle" class="tb">P1 stack trace posted in #incident-response</text>
+  <text x="480" y="102" text-anchor="middle" class="tb">Stack trace → #incident-response  or  AI pane</text>
+  <text x="480" y="120" text-anchor="middle" class="sub">two front doors, one agent</text>
 
   <!-- B -->
   <rect class="box" x="320" y="166" width="320" height="58" fill="#f1f3f4" stroke="#9aa0a6"/>
   <text x="480" y="191" text-anchor="middle" class="tb">Bolt-JS event listener</text>
   <text x="480" y="210" text-anchor="middle" class="sub">stack-trace heuristic gate</text>
 
-  <!-- C (RTS) -->
+  <!-- C (memory) -->
   <rect class="box" x="55" y="270" width="390" height="92" fill="#e6f4ea" stroke="#34a853"/>
-  <text x="250" y="296" text-anchor="middle" class="tb">① RTS API — Real-Time Search</text>
-  <text x="250" y="316" text-anchor="middle" class="sub">question-form semantic query over history</text>
-  <text x="250" y="334" text-anchor="middle" class="sub">→ prior incident + resolver + fix thread</text>
-  <text x="250" y="352" text-anchor="middle" class="elabel">the memory engine (hero)</text>
+  <text x="250" y="294" text-anchor="middle" class="tb">① Memory — Slack workspace search</text>
+  <text x="250" y="313" text-anchor="middle" class="sub">AI pane → Real-Time Search (semantic question query)</text>
+  <text x="250" y="331" text-anchor="middle" class="sub">channel → conversation-history search</text>
+  <text x="250" y="352" text-anchor="middle" class="elabel">→ prior incident + resolver + fix thread</text>
 
   <!-- D (MCP) -->
   <rect class="box" x="515" y="270" width="390" height="92" fill="#fce8e6" stroke="#ea4335"/>

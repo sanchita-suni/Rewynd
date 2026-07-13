@@ -61,6 +61,19 @@ export function computeDrift(
 ): DriftResult {
   const cur = window(currentContent, line, radius);
   const old = window(fixEraContent, line, radius);
+
+  // If either side gave us nothing to look at (bad fetch, line past EOF), we have
+  // no evidence the fix survived — never let "no data" masquerade as a MATCH.
+  if (cur.length === 0 || old.length === 0) {
+    return {
+      verdict: 'DRIFTED',
+      diffText:
+        `Could not read line ${line} in one of the two versions of ${filePathForHeader} ` +
+        `(the file may have shrunk, or the fetch failed). Treating as unverified — ` +
+        `do not assume the old fix still applies.`,
+    };
+  }
+
   const unchanged = cur.length === old.length && cur.every((l, i) => l === old[i]);
 
   if (unchanged) {

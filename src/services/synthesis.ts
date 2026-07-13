@@ -129,7 +129,7 @@ export class LlmSynthesisService implements SynthesisService {
       // If the model was too terse for a ~15s clip, use the fuller deterministic
       // summary instead (keeps the LLM's recommendation).
       const words = triageSummary.split(/\s+/).filter(Boolean).length;
-      if (words < 18) {
+      if (words < 28) {
         console.log(`[LLM] summary too short (${words}w) → using deterministic summary for audio`);
         triageSummary = (await this.fallback.recommend(prior, code)).triageSummary;
       }
