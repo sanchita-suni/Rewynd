@@ -4,11 +4,11 @@
   "description": "Rewynd — a Slack incident-response agent that grounds stack traces in prior incidents, live code, AI synthesis, and voice triage.",
   "private": true,
   "type": "commonjs",
-  "main": "dist/app.js",
+  "main": "dist/src/app.js",
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "start": "node dist/app.js",
+    "start": "node dist/src/app.js",
     "dev": "ts-node-dev --respawn --transpile-only src/app.ts",
     "check:ai-search": "ts-node scripts/checkAiSearch.ts",
     "check:layer2": "ts-node scripts/checkLayer2.ts",
