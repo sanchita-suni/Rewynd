@@ -58,10 +58,20 @@ registerActionListeners(app);
  */
 function startHealthServer(): void {
   const port = Number(process.env.PORT ?? config.slack.port);
-  createServer((_req, res) => {
+  const server = createServer((_req, res) => {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ status: 'ok', service: 'rewynd', mode: 'socket' }));
-  }).listen(port, () => {
+  });
+
+  // The health endpoint is a hosting convenience, not a dependency — Socket Mode
+  // needs no inbound port. Never let it take the agent down (e.g. a stale process
+  // still holding the port locally).
+  server.on('error', (err: NodeJS.ErrnoException) => {
+    const why = err.code === 'EADDRINUSE' ? `port ${port} already in use` : err.message;
+    console.log(`   (health endpoint not started — ${why}; the agent is unaffected)`);
+  });
+
+  server.listen(port, () => {
     console.log(`   health endpoint listening on :${port}`);
   });
 }
