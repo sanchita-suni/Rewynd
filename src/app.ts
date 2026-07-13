@@ -1,3 +1,4 @@
+import { createServer } from 'node:http';
 import { App, LogLevel } from '@slack/bolt';
 import { config } from './config';
 import { registerMessageListener } from './listeners/message';
@@ -50,9 +51,25 @@ registerActionListeners(app);
 // carries the `action_token` that semantic Real-Time Search needs. The message
 // listener handles that surface directly (see listeners/message.ts).
 
+/**
+ * Socket Mode needs no inbound port, but PaaS free tiers (Render web services et
+ * al.) require the process to bind $PORT and will idle it out otherwise. Expose a
+ * tiny health endpoint so the app can be hosted anywhere and kept warm by a pinger.
+ */
+function startHealthServer(): void {
+  const port = Number(process.env.PORT ?? config.slack.port);
+  createServer((_req, res) => {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ status: 'ok', service: 'rewynd', mode: 'socket' }));
+  }).listen(port, () => {
+    console.log(`   health endpoint listening on :${port}`);
+  });
+}
+
 (async () => {
   if (config.slack.socketMode) {
     await app.start();
+    startHealthServer();
   } else {
     await app.start(config.slack.port);
   }
